@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Wesper Assignment</string>
+    <string name="start">Start</string>
+    <string name="points">P: %1d</string>
+    <string name="time">T: %1d</string>
+    <string name="top">Top time: %1d seconds</string>
+</resources>
