@@ -46,12 +46,20 @@
         app:layout_constraintTop_toBottomOf="@id/points"
         android:layout_marginTop="@dimen/default_margin"/>
 
+    <Button
+        android:id="@+id/start_series"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/button_height"
+        android:text="@string/start_bonus"
+        app:layout_constraintTop_toBottomOf="@id/start"
+        android:layout_marginTop="@dimen/default_margin"/>
+
     <TextView
         android:id="@+id/top_time"
         android:layout_width="match_parent"
         android:textSize="@dimen/text_size"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@id/start"
+        app:layout_constraintTop_toBottomOf="@id/start_series"
         app:layout_constraintEnd_toEndOf="@id/start"
         app:layout_constraintStart_toStartOf="@id/start"
         android:maxLines="1"

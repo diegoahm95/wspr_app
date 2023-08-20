@@ -4,16 +4,13 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.app.wesperassignment.model.BoardCell
-import com.app.wesperassignment.model.getDefaultListOfCells
-import com.app.wesperassignment.utils.BOARD_SIZE
+import com.app.wesperassignment.model.Game
+import com.app.wesperassignment.model.StandardGame
 import com.app.wesperassignment.utils.ROUND_LOAD_TIME
-import com.app.wesperassignment.utils.square
 import com.app.wesperassignment.view.OnCellTapListener
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.random.Random
 
 class BoardGameViewModel: ViewModel(), OnCellTapListener {
 
@@ -21,34 +18,41 @@ class BoardGameViewModel: ViewModel(), OnCellTapListener {
         value = BoardGameUIState()
     }
 
-    private var roundTime = 3000L
-    private var numberOfRounds = 1
-    private var flashedCell = -1
     private var currentProcess: Job? = null
 
     fun getGameData(): LiveData<BoardGameUIState> = gameLiveData
 
     override fun onCellTapped(position: Int) {
-        if (getState().gameStarted) {
-            currentProcess?.cancel()
-            if (position == flashedCell) {
-                increasePoints()
+        if (getGame().gameStarted) {
+            if (getGame().isPartialSeriesPressed(position)){
+                updateFlashes()
             } else {
-                reducePoints()
-            }
-            finishRound()
-            if (gameShouldContinue()) {
-                startRound()
+                currentProcess?.cancel()
+                if (getGame().areCellsPressed(position)) {
+                    increasePoints()
+                } else {
+                    reducePoints()
+                }
+                finishRound()
+                if (getGame().gameShouldContinue()) {
+                    startRound()
+                }
             }
         }
     }
 
-    private fun gameShouldContinue() =
-        getState().points > 0 && getState().gameStarted
-
-    fun startGame() {
+    private fun updateFlashes(){
         gameLiveData.value = getState().copy(
+            game = getGame()
+        )
+    }
+
+    fun startGame(newGame: Game) {
+        newGame.apply {
             gameStarted = true
+        }
+        gameLiveData.value = getState().copy(
+            game = newGame
         )
         startRound()
         startTimer()
@@ -56,7 +60,7 @@ class BoardGameViewModel: ViewModel(), OnCellTapListener {
 
     private fun startTimer(){
         viewModelScope.launch {
-            while (getState().gameStarted){
+            while (getGame().gameStarted){
                 delay(1000)
                 increaseSeconds()
                 updateTopIfRequired()
@@ -66,7 +70,7 @@ class BoardGameViewModel: ViewModel(), OnCellTapListener {
 
     private fun updateTopIfRequired(){
         val top = getState().topScore
-        val current = getState().timeElapsed
+        val current = getGame().timeElapsed
         if (current > top){
             gameLiveData.value = getState().copy(
                 topScore = current
@@ -79,7 +83,7 @@ class BoardGameViewModel: ViewModel(), OnCellTapListener {
             // Giving user a natural wait time between rounds
             delay(ROUND_LOAD_TIME)
             flashRandomCell()
-            delay(roundTime)
+            delay(getGame().roundTime)
             onNothingPressed()
         }
     }
@@ -87,7 +91,7 @@ class BoardGameViewModel: ViewModel(), OnCellTapListener {
     private fun onNothingPressed(){
         reducePoints()
         finishRound()
-        if (gameShouldContinue()){
+        if (getGame().gameShouldContinue()){
             startRound()
         }
     }
@@ -99,78 +103,85 @@ class BoardGameViewModel: ViewModel(), OnCellTapListener {
     }
 
     private fun recalculateRoundTime(){
-        if (numberOfRounds % 5 == 0){
-            roundTime = (roundTime * 0.9).toLong()
+        if (getGame().numberOfRounds % 5 == 0){
+            getGame().roundTime = (getGame().roundTime * 0.9).toLong()
         }
     }
 
     private fun reducePoints(){
-        val points = getState().points - 1
+        val newPoints = getGame().points - 1
+        val game = getGame().apply {
+            points = newPoints
+        }
         gameLiveData.value = getState().copy(
-            points = points
+            game = game
         )
     }
 
     private fun increasePoints(){
-        val points = getState().points + 1
+        val newPoints = getGame().points + 1
+        val game = getGame().apply {
+            points = newPoints
+        }
         gameLiveData.value = getState().copy(
-            points = points
+            game = game
         )
     }
 
     private fun increaseSeconds(){
-        val time = getState().timeElapsed + 1
-        gameLiveData.value = getState().copy(
+        val time = getGame().timeElapsed + 1
+        val game = getGame().apply {
             timeElapsed = time
+        }
+        gameLiveData.value = getState().copy(
+            game = game
         )
     }
 
     private fun increaseRound(){
-        numberOfRounds++
+        getGame().numberOfRounds++
     }
 
     private fun unflashBoard(){
-        if (flashedCell > -1){
-            val newList = getState().cells
-            newList[flashedCell].flashed = false
+        if (getGame().areCellsFlashed()){
+            val game = getGame().apply {
+                unflashBoard()
+            }
             val state = getState().copy(
-                cells = newList
+                game = game
             )
             gameLiveData.value = state
         }
     }
 
-    private fun flashRandomCell(): Int {
-        val random = Random.nextInt(0, BOARD_SIZE.square())
-        val newList = getState().cells
-        newList[random].flashed = true
+    private fun flashRandomCell() {
+        val game = getGame().apply {
+            flashRandomCell()
+        }
         val state = getState().copy(
-            cells = newList
+            game = game
         )
         gameLiveData.value = state
-        flashedCell = random
-        return random
     }
 
     fun restartGame() {
         val top = getState().topScore
+        val game = getGame().apply {
+            restartGame()
+        }
         gameLiveData.value = BoardGameUIState(
-            topScore = top
+            topScore = top,
+            game = game
         )
-        roundTime = 3000L
-        numberOfRounds = 1
-        flashedCell = -1
         currentProcess = null
     }
 
     private fun getState() = gameLiveData.value!!
 
+    private fun getGame() = getState().game!!
 }
 
 data class BoardGameUIState(
-    var gameStarted: Boolean = false,
-    var timeElapsed: Int = 0,
-    var points: Int = 1,
-    var cells: List<BoardCell> = getDefaultListOfCells(BOARD_SIZE),
+    var game: Game? = StandardGame(),
     var topScore: Int = 0
 )

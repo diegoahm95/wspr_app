@@ -9,6 +9,8 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.app.wesperassignment.R
 import com.app.wesperassignment.model.BoardCell
+import com.app.wesperassignment.model.SeriesGame
+import com.app.wesperassignment.model.StandardGame
 import com.app.wesperassignment.model.getDefaultListOfCells
 import com.app.wesperassignment.utils.BOARD_SIZE
 import com.app.wesperassignment.viewmodel.BoardGameUIState
@@ -22,13 +24,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var time: TextView
     private lateinit var top: TextView
     private lateinit var start: Button
+    private lateinit var startSeries: Button
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         getViews()
         createGrid()
-        setupButton()
+        setupButtons()
         subscribeToData()
     }
 
@@ -47,6 +50,7 @@ class MainActivity : AppCompatActivity() {
         time = findViewById(R.id.time)
         start = findViewById(R.id.start)
         top = findViewById(R.id.top_time)
+        startSeries = findViewById(R.id.start_series)
     }
 
     private fun subscribeToData(){
@@ -57,10 +61,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleUIState(state: BoardGameUIState) {
         with (state){
-            if (points < 1){
+            if (game!!.points < 1){
                 restartGame()
             } else {
-                if (gameStarted){
+                if (game!!.gameStarted){
                     processGame(this)
                 } else {
                     setIdleState()
@@ -74,9 +78,11 @@ class MainActivity : AppCompatActivity() {
         if (start.isEnabled){
             toggleButton(false)
         }
-        updatePoints(state.points)
-        updateTime(state.timeElapsed)
-        updateList(state.cells)
+        with(state.game!!){
+            updatePoints(points)
+            updateTime(timeElapsed)
+            updateList(cells)
+        }
     }
 
     private fun updateList(cells: List<BoardCell>){
@@ -96,14 +102,18 @@ class MainActivity : AppCompatActivity() {
         viewModel.restartGame()
     }
 
-    private fun setupButton(){
+    private fun setupButtons(){
         start.setOnClickListener {
-            viewModel.startGame()
+            viewModel.startGame(StandardGame())
+        }
+        startSeries.setOnClickListener {
+            viewModel.startGame(SeriesGame())
         }
     }
 
     private fun toggleButton(enabled: Boolean){
         start.isEnabled = enabled
+        startSeries.isEnabled = enabled
     }
 
     private fun updatePoints(pts: Int){

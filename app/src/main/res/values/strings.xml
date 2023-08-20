@@ -4,4 +4,5 @@
     <string name="points">P: %1d</string>
     <string name="time">T: %1d</string>
     <string name="top">Top time: %1d seconds</string>
+    <string name="start_bonus">Start BONUS game</string>
 </resources>
